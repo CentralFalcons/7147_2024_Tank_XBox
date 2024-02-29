@@ -36,9 +36,6 @@ public class Robot extends TimedRobot {
   private static double INPUT_SPEED = .25;
   private static double OUTPUT_SPEED = .25;
 
-
-
-
   public Robot() {
     SendableRegistry.addChild(m_robotDrive, m_frontLeft);
     SendableRegistry.addChild(m_robotDrive, m_rearLeft);
