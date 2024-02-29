@@ -9,7 +9,6 @@ import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 
 import edu.wpi.first.util.sendable.SendableRegistry;
-// import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.XboxController;
@@ -75,5 +74,5 @@ public class Robot extends TimedRobot {
       m_shooterFront.set(0);
       m_shooterRear.set(0);
     }
-
+  }
 }
