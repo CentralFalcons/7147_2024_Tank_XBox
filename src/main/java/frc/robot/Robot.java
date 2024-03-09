@@ -76,11 +76,11 @@ public class Robot extends TimedRobot {
     // Drive with arcade drive.
     // That means that the Y axis drives forward
     // and backward, and the X turns left and right.
-if(driver_controller.getRightBumper()){
-   m_robotDrive.tankDrive(-driver_controller.getLeftY()*0.75, -driver_controller.getRightY()*0.75);
-} else {
-   m_robotDrive.tankDrive(-driver_controller.getLeftY(), -driver_controller.getRightY());
-}
+    if(driver_controller.getRightBumper()){
+      m_robotDrive.tankDrive(-driver_controller.getLeftY()*0.75, -driver_controller.getRightY()*0.75);
+    } else {
+      m_robotDrive.tankDrive(-driver_controller.getLeftY(), -driver_controller.getRightY());
+    }
 
 
     // Shooter Front
@@ -96,7 +96,7 @@ if(driver_controller.getRightBumper()){
     if(shooter_controller.getRightBumper()){
       m_shooterRear.set(OUTPUT_SPEED_REAR);
     } else if(shooter_controller.getAButton())
-      m_shooterFront.set(-INPUT_SPEED); 
+      m_shooterRear.set(-INPUT_SPEED); 
     else {
       m_shooterRear.set(0);
     }
