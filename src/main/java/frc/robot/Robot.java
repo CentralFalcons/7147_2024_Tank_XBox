@@ -18,6 +18,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.Timer;
 
 /**
  * This is a demo program showing the use of the DifferentialDrive class. Runs the motors with
@@ -40,10 +41,25 @@ public class Robot extends TimedRobot {
   private XboxController driver_controller = new XboxController(0);
   private XboxController shooter_controller = new XboxController(1);
 
+  // motor constants
   private static double INPUT_SPEED = .50;
   private static double OUTPUT_SPEED_FRONT = 1;
   private static double OUTPUT_SPEED_REAR = 1;
   private static double INTAKE_SPEED = .25;
+
+  // Current Limit Constatns
+  static final boolean CURRTNE_LIMIT_ENABLED = true;
+  static final int PEAK_CURRENT_AMPS = 40;
+  static final int PEAK_CURRENT_DURATION_MS = 0;
+  static final int CONTINUOUS_CURRENT_AMPS = 40;
+
+  /* Current to maintain once current limit has been triggered */
+  static final int kContinCurrentAmps = 10;
+
+  // Create a time for the autonmous period
+  private Timer timer = new Timer();
+  static final double AUTO_SPEED = .5;
+  static final int AUTO_TIME_S = 3;
 
   public Robot() {
     SendableRegistry.addChild(m_robotDrive, m_frontLeft);
@@ -54,6 +70,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotInit() {
+
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
@@ -61,14 +78,63 @@ public class Robot extends TimedRobot {
     m_rearRight.set(TalonSRXControlMode.Follower,3);
     m_frontRight.setInverted(true);
     m_rearRight.setInverted(true);
+
+    // Set the netural mode to brake. This will make the robot slowdown faster
+    // and it will resist being pushed by other robots. 
     m_frontRight.setNeutralMode(NeutralMode.Brake);
     m_frontLeft.setNeutralMode(NeutralMode.Brake);
     m_rearRight.setNeutralMode(NeutralMode.Brake);
     m_rearLeft.setNeutralMode(NeutralMode.Brake);
+
     m_frontRight.configNeutralDeadband(0);
     m_frontLeft.configNeutralDeadband(0);
     m_rearRight.configNeutralDeadband(0);
     m_rearLeft.configNeutralDeadband(0);
+
+    // Set the current limits
+    m_frontLeft.enableCurrentLimit(CURRTNE_LIMIT_ENABLED);
+    m_frontLeft.configContinuousCurrentLimit(CONTINUOUS_CURRENT_AMPS);
+    m_frontLeft.configPeakCurrentLimit(PEAK_CURRENT_AMPS);
+    m_frontLeft.configPeakCurrentDuration(PEAK_CURRENT_DURATION_MS);
+
+    m_rearLeft.enableCurrentLimit(CURRTNE_LIMIT_ENABLED);
+    m_rearLeft.configContinuousCurrentLimit(CONTINUOUS_CURRENT_AMPS);
+    m_rearLeft.configPeakCurrentLimit(PEAK_CURRENT_AMPS);
+    m_rearLeft.configPeakCurrentDuration(PEAK_CURRENT_DURATION_MS);
+
+    m_frontRight.enableCurrentLimit(CURRTNE_LIMIT_ENABLED);
+    m_frontRight.configContinuousCurrentLimit(CONTINUOUS_CURRENT_AMPS);
+    m_frontRight.configPeakCurrentLimit(PEAK_CURRENT_AMPS);
+    m_frontRight.configPeakCurrentDuration(PEAK_CURRENT_DURATION_MS);
+
+    m_rearRight.enableCurrentLimit(CURRTNE_LIMIT_ENABLED);
+    m_rearRight.configContinuousCurrentLimit(CONTINUOUS_CURRENT_AMPS);
+    m_rearRight.configPeakCurrentLimit(PEAK_CURRENT_AMPS);
+    m_rearRight.configPeakCurrentDuration(PEAK_CURRENT_DURATION_MS);
+
+  }
+
+  @Override
+  public void autonomousInit() {
+    timer.reset();
+    timer.start();
+  }
+
+  /** This function is called periodically during autonomous. */
+  @Override
+  public void autonomousPeriodic() {
+
+    m_robotDrive.tankDrive(0, 0);
+    if(timer.get() < AUTO_TIME_S) {
+      m_robotDrive.tankDrive(AUTO_SPEED, AUTO_SPEED);
+    } else {
+    m_robotDrive.tankDrive(0, 0);
+    }
+  }
+
+  /** This function is called once when teleop is enabled. */
+  @Override
+  public void teleopInit() {
   }
 
   @Override
@@ -76,11 +142,14 @@ public class Robot extends TimedRobot {
     // Drive with arcade drive.
     // That means that the Y axis drives forward
     // and backward, and the X turns left and right.
-    if(driver_controller.getRightBumper()){
+    if(driver_controller.getRightBumper() && !shooter_controller.getYButton()){
       m_robotDrive.tankDrive(-driver_controller.getLeftY()*0.75, -driver_controller.getRightY()*0.75);
-    } else {
+    } else if (!shooter_controller.getYButton()){
       m_robotDrive.tankDrive(-driver_controller.getLeftY(), -driver_controller.getRightY());
+    } else {
+      m_robotDrive.tankDrive(0, 0);
     }
+
 
 
     // Shooter Front
