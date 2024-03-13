@@ -14,6 +14,8 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
 import edu.wpi.first.util.sendable.SendableRegistry;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.XboxController;
@@ -55,11 +57,30 @@ public class Robot extends TimedRobot {
 
   /* Current to maintain once current limit has been triggered */
   static final int kContinCurrentAmps = 10;
-
+  
   // Create a time for the autonmous period
   private Timer timer = new Timer();
-  static final double AUTO_SPEED = .5;
-  static final int AUTO_TIME_S = 3;
+
+  //Autonomous Chooser This is used to select the auto mode
+  private static final String DEFAULT = "Do Nothing";
+  private static final String DRIVE = "Drive Forward and Stop";
+  private static final String SHOOT = "Shoot and Drive Backward";
+  private String m_autoSelected;
+  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+
+  //Parameters for the DRIVE auto mode
+  //These times represent when the next action starts
+  static final double AUTO_DRIVE_SPEED = .5; //The speed to drive out for the auto drive mode
+  static final double AUTO_DRIVE_START_TIME_S = 0; //When to start driving
+  static final double AUTO_DRIVE_STOP_TIME_S = 2; //When to stop driving
+
+  //These parameters control the shooting parameter
+  //These times represent when the next action starts
+  static final double AUTO_SHOOT_DRIVE_SPEED = .5;
+  static final double AUTO_SHOOT_FRONT_TIME_S = 0; //When to start the front motor
+  static final double AUTO_SHOOT_REAR_TIME_S = .5; //When to start the rear motor and leave the front motor on
+  static final double AUTO_SHOOT_DRIVE_TIME_S = 1; //When stop the shooter and start driving forward
+  static final double AUTO_SHOOT_STOP_TIME_S = 4; //When to stop driving
 
   public Robot() {
     SendableRegistry.addChild(m_robotDrive, m_frontLeft);
@@ -112,6 +133,14 @@ public class Robot extends TimedRobot {
     m_rearRight.configPeakCurrentLimit(PEAK_CURRENT_AMPS);
     m_rearRight.configPeakCurrentDuration(PEAK_CURRENT_DURATION_MS);
 
+    //Autonomous Chooser
+    m_chooser.setDefaultOption("Do Nothing", DEFAULT);
+    m_chooser.addOption("Drive Forward and Stop", DRIVE);
+    m_chooser.addOption("Shoot and Drive Backward", SHOOT);
+    SmartDashboard.putData("Auto Choices", m_chooser);
+
+    m_autoSelected = m_chooser.getSelected();
+    System.out.println("Auto selected: " + m_autoSelected);
   }
 
   @Override
@@ -124,11 +153,36 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousPeriodic() {
 
-    m_robotDrive.tankDrive(0, 0);
-    if(timer.get() < AUTO_TIME_S) {
-      m_robotDrive.tankDrive(AUTO_SPEED, AUTO_SPEED);
-    } else {
-    m_robotDrive.tankDrive(0, 0);
+    switch (m_autoSelected) {
+
+      case DRIVE:
+        if(timer.get() > AUTO_DRIVE_START_TIME_S && timer.get() < AUTO_DRIVE_STOP_TIME_S) {
+          m_robotDrive.tankDrive(AUTO_DRIVE_SPEED, AUTO_DRIVE_SPEED);
+        } else {
+          m_robotDrive.tankDrive(0, 0);
+        }
+        break;
+
+      case SHOOT:
+        if(timer.get() > AUTO_SHOOT_FRONT_TIME_S && timer.get() < AUTO_SHOOT_REAR_TIME_S){
+          m_shooterFront.set(OUTPUT_SPEED_FRONT);
+        } else if( timer.get() > AUTO_SHOOT_REAR_TIME_S && timer.get() < AUTO_SHOOT_DRIVE_TIME_S) {
+          m_shooterFront.set(OUTPUT_SPEED_FRONT);
+          m_shooterRear.set(OUTPUT_SPEED_REAR);
+        } else if ( timer.get() > AUTO_SHOOT_DRIVE_TIME_S && timer.get() < AUTO_SHOOT_STOP_TIME_S){
+          m_shooterFront.set(0);
+          m_shooterRear.set(0);
+          m_robotDrive.tankDrive(AUTO_SHOOT_DRIVE_SPEED, AUTO_SHOOT_DRIVE_SPEED);
+        } else {
+          m_robotDrive.tankDrive(0,0);
+        }
+        break;
+
+      default:
+        m_robotDrive.tankDrive(0,0);
+        m_shooterFront.set(0);
+        m_shooterRear.set(0);
+        break;
     }
   }
 
