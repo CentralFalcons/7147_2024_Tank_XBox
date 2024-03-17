@@ -6,6 +6,7 @@ package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.TalonSRXControlMode;
+import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 
@@ -35,12 +36,12 @@ public class Robot extends TimedRobot {
   private WPI_TalonSRX m_rearRight = new WPI_TalonSRX(4);
 
   //Create the motor controllers for the front and rear shooter motors
-  private MotorController m_shooterFront = new WPI_VictorSPX(5);
+  private CANSparkMax m_shooterFront = new CANSparkMax(7, MotorType.kBrushed);
   private MotorController m_shooterRear = new WPI_VictorSPX(6);
 
   //Create the motor controller for the intake
-  private CANSparkMax m_intake = new CANSparkMax(7, MotorType.kBrushed);
-
+  private MotorController m_intake = new WPI_VictorSPX(5);
+  
   //Create a differential drive
   private DifferentialDrive m_robotDrive = new DifferentialDrive(m_frontLeft::set, m_frontRight::set);
 
@@ -56,8 +57,8 @@ public class Robot extends TimedRobot {
 
   //Create current limit constatns
   static final boolean CURRTNE_LIMIT_ENABLED = true;
-  static final int PEAK_CURRENT_AMPS = 60;
-  static final int PEAK_CURRENT_DURATION_MS = 500;
+  static final int PEAK_CURRENT_AMPS = 50;
+  static final int PEAK_CURRENT_DURATION_MS = 100;
   static final int CONTINUOUS_CURRENT_AMPS = 40;
   
   // Create a time for the autonmous period
@@ -75,14 +76,15 @@ public class Robot extends TimedRobot {
   //These times represent when the next action starts
   static final double AUTO_DRIVE_SPEED = .5; //The speed to drive
   static final double AUTO_DRIVE_START_TIME_S = 0; //When to start driving
-  static final double AUTO_DRIVE_STOP_TIME_S = 2; //When to stop driving
+  static final double AUTO_DRIVE_STOP_TIME_S = 2.75; //When to stop driving
 
   //Create constants for the SHOOT auto mode
   //These times represent when the next action starts
   static final double AUTO_SHOOT_DRIVE_SPEED = .5; //The speed to drive
+  static final double AUTO_SHOOT_DRIVE_FIRST_STOP_TIME_S = .2; //When to to stop driving the first time
   static final double AUTO_SHOOT_FRONT_START_TIME_S = 0; //When to start the front motor
-  static final double AUTO_SHOOT_REAR_START_TIME_S = .5; //When to start the rear motor and leave the front motor on
-  static final double AUTO_SHOOT_DRIVE_START_TIME_S = 1; //When stop the shooter and start driving forward
+  static final double AUTO_SHOOT_REAR_START_TIME_S = 1; //When to start the rear motor and leave the front motor on
+  static final double AUTO_SHOOT_DRIVE_START_TIME_S = 2; //When stop the shooter and start driving forward
   static final double AUTO_SHOOT_DRIVE_STOP_TIME_S = 4; //When to stop driving
 
   public Robot() {
@@ -141,15 +143,15 @@ public class Robot extends TimedRobot {
     m_chooser.addOption("Drive Forward and Stop", DRIVE);
     m_chooser.addOption("Shoot and Drive Backward", SHOOT);
     SmartDashboard.putData("Auto Choices", m_chooser);
-
-    m_autoSelected = m_chooser.getSelected();
-    System.out.println("Auto selected: " + m_autoSelected);
   }
 
   @Override
   public void autonomousInit() {
     timer.reset();
     timer.start();
+
+    m_autoSelected = m_chooser.getSelected();
+    System.out.println("Auto selected: " + m_autoSelected);
   }
 
   /** This function is called periodically during autonomous. */
@@ -160,22 +162,24 @@ public class Robot extends TimedRobot {
 
       case DRIVE:
         if(timer.get() > AUTO_DRIVE_START_TIME_S && timer.get() < AUTO_DRIVE_STOP_TIME_S) {
-          m_robotDrive.tankDrive(AUTO_DRIVE_SPEED, AUTO_DRIVE_SPEED);
+          m_robotDrive.tankDrive(AUTO_DRIVE_SPEED, AUTO_DRIVE_SPEED*1.05);
         } else {
           m_robotDrive.tankDrive(0, 0);
         }
         break;
 
       case SHOOT:
-        if(timer.get() > AUTO_SHOOT_FRONT_START_TIME_S && timer.get() < AUTO_SHOOT_REAR_START_TIME_S){
-          m_shooterFront.set(OUTPUT_SPEED_FRONT);
+        if(timer.get() < AUTO_SHOOT_DRIVE_FIRST_STOP_TIME_S){
+          m_robotDrive.tankDrive(-AUTO_SHOOT_DRIVE_SPEED, -AUTO_SHOOT_DRIVE_SPEED);
+        } else if(timer.get() > AUTO_SHOOT_DRIVE_FIRST_STOP_TIME_S && timer.get() < AUTO_SHOOT_REAR_START_TIME_S){
+          m_shooterFront.set(-OUTPUT_SPEED_FRONT);
         } else if( timer.get() > AUTO_SHOOT_REAR_START_TIME_S && timer.get() < AUTO_SHOOT_DRIVE_START_TIME_S) {
-          m_shooterFront.set(OUTPUT_SPEED_FRONT);
+          m_shooterFront.set(-OUTPUT_SPEED_FRONT);
           m_shooterRear.set(OUTPUT_SPEED_REAR);
         } else if ( timer.get() > AUTO_SHOOT_DRIVE_START_TIME_S && timer.get() < AUTO_SHOOT_DRIVE_STOP_TIME_S){
           m_shooterFront.set(0);
           m_shooterRear.set(0);
-          m_robotDrive.tankDrive(AUTO_SHOOT_DRIVE_SPEED, AUTO_SHOOT_DRIVE_SPEED);
+          m_robotDrive.tankDrive(-AUTO_SHOOT_DRIVE_SPEED, -AUTO_SHOOT_DRIVE_SPEED);
         } else {
           m_robotDrive.tankDrive(0,0);
         }
@@ -207,25 +211,21 @@ public class Robot extends TimedRobot {
       m_robotDrive.tankDrive(0, 0);
     }
 
-    // Shooter Front
-    if(shooter_controller.getYButton()){
-      m_shooterFront.set(OUTPUT_SPEED_FRONT);
-    } else if(shooter_controller.getAButton())
-      m_shooterFront.set(-INPUT_SPEED);
-    else {
-      m_shooterFront.set(0);
-    }
-
-    // Shooter Rear
-    if(shooter_controller.getRightBumper()){
-      m_shooterRear.set(OUTPUT_SPEED_REAR);
-    } else if(shooter_controller.getAButton())
+    // Shooter
+    if(shooter_controller.getYButton() && !shooter_controller.getRightBumper()){
+      m_shooterFront.set(-OUTPUT_SPEED_FRONT);
+    } else if(shooter_controller.getAButton()){
+      m_shooterFront.set(INPUT_SPEED);
       m_shooterRear.set(-INPUT_SPEED); 
-    else {
+    } else if(shooter_controller.getRightBumper()){
+      m_shooterFront.set(-OUTPUT_SPEED_FRONT);
+      m_shooterRear.set(OUTPUT_SPEED_REAR);
+    } else {
+      m_shooterFront.set(0);
       m_shooterRear.set(0);
     }
     
-    //intake
+    // intake
     if (shooter_controller.getBButton()){
       m_intake.set(INTAKE_SPEED);
     } else if (shooter_controller.getXButton()) {
