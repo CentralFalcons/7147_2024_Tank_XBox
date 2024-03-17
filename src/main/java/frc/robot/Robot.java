@@ -14,9 +14,12 @@ import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
+import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.util.datalog.DoubleLogEntry;
 import edu.wpi.first.util.sendable.SendableRegistry;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.XboxController;
@@ -71,6 +74,12 @@ public class Robot extends TimedRobot {
   private static final String SHOOT = "Shoot and Drive Backward";
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  private DoubleLogEntry JoyLeft;
+  private DoubleLogEntry JoyRight;
+  private DoubleLogEntry FrontLeft;
+  private DoubleLogEntry FrontRight;
+  private DoubleLogEntry RearLeft;
+  private DoubleLogEntry RearRight;
 
   //Create constants for the DRIVE auto mode
   //These times represent when the next action starts
@@ -143,6 +152,15 @@ public class Robot extends TimedRobot {
     m_chooser.addOption("Drive Forward and Stop", DRIVE);
     m_chooser.addOption("Shoot and Drive Backward", SHOOT);
     SmartDashboard.putData("Auto Choices", m_chooser);
+
+    DataLogManager.start();
+    var log = DataLogManager.getLog();
+    JoyLeft = new DoubleLogEntry(log,"/JoyLeft");
+    JoyRight = new DoubleLogEntry(log, "/JoyRight");
+    FrontRight = new DoubleLogEntry(log, "/FrontRight");
+    FrontLeft = new DoubleLogEntry(log, "/FrontLeft");
+    RearRight = new DoubleLogEntry(log, "/RearRight");
+    RearLeft = new DoubleLogEntry(log, "/RearLeft")
   }
 
   @Override
@@ -203,13 +221,25 @@ public class Robot extends TimedRobot {
     // Drive with arcade drive.
     // That means that the Y axis drives forward
     // and backward, and the X turns left and right.
+    double leftDrive = -driver_controller.getLeftX();
+    double rightDrive = -driver_controller.getRightY();
     if(driver_controller.getRightBumper() && !shooter_controller.getYButton()){
-      m_robotDrive.tankDrive(-driver_controller.getLeftY()*0.75, -driver_controller.getRightY()*0.75);
+      leftDrive *= 0.75;
+      rightDrive *= 0.75;
+      m_robotDrive.tankDrive(leftDrive, rightDrive);
     } else if (!shooter_controller.getYButton()){
-      m_robotDrive.tankDrive(-driver_controller.getLeftY(), -driver_controller.getRightY());
+      m_robotDrive.tankDrive(leftDrive, rightDrive);
     } else {
-      m_robotDrive.tankDrive(0, 0);
+      leftDrive = 0;
+      rightDrive = 0;
+      m_robotDrive.tankDrive(leftDrive, rightDrive);
     }
+    JoyLeft.append(leftDrive);
+    JoyRight.append(rightDrive);
+    FrontLeft.append(m_frontLeft.getMotorOutputVoltage());
+    FrontRight.append(m_frontRight.getMotorOutputVoltage());
+    RearLeft.append(m_rearLeft.getMotorOutputVoltage());
+    RearRight.append(m_rearRight.getMotorOutputVoltage());
 
     // Shooter
     if(shooter_controller.getYButton() && !shooter_controller.getRightBumper()){
@@ -233,5 +263,7 @@ public class Robot extends TimedRobot {
     } else {
       m_intake.set(0);
     }
+
+    JoyLeft.append(kDefaultPeriod);
   }
 }
