@@ -76,7 +76,7 @@ public class Robot extends TimedRobot {
   //These times represent when the next action starts
   static final double AUTO_DRIVE_SPEED = .5; //The speed to drive
   static final double AUTO_DRIVE_START_TIME_S = 0; //When to start driving
-  static final double AUTO_DRIVE_STOP_TIME_S = 2.75; //When to stop driving
+  static final double AUTO_DRIVE_STOP_TIME_S = 3.75; //When to stop driving
 
   //Create constants for the SHOOT auto mode
   //These times represent when the next action starts
@@ -162,7 +162,7 @@ public class Robot extends TimedRobot {
 
       case DRIVE:
         if(timer.get() > AUTO_DRIVE_START_TIME_S && timer.get() < AUTO_DRIVE_STOP_TIME_S) {
-          m_robotDrive.tankDrive(AUTO_DRIVE_SPEED, AUTO_DRIVE_SPEED*1.05);
+          m_robotDrive.tankDrive(AUTO_DRIVE_SPEED, AUTO_DRIVE_SPEED);
         } else {
           m_robotDrive.tankDrive(0, 0);
         }
